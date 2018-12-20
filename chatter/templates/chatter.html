@@ -1,0 +1,50 @@
+{% extends 'base_layout.html' %}
+
+{% block content %}
+
+{% if user.is_authenticated %}
+<textarea id="chat-log" cols='100' rows='20'></textarea><br>
+<input id="chat-message-input" type="text" size="100">
+<input id="chat-message-submit" type="button" value='Send'><br>
+
+<script>
+    var chatSocket = new WebSocket(
+        'ws://' + window.location.host +
+        '/ws/chat/'
+    );
+
+    chatSocket.onmessage = function(event) {
+        var data = JSON.parse(event.data);
+        var user = data['username']
+        var message = data['message'];
+        document.querySelector("#chat-log").value += (user + ": " + message + "\n");
+    }
+
+    chatSocket.onclose = function(event) {
+        console.error('Chat socket has closed unexpectedly');
+    }
+
+    document.querySelector('#chat-message-input').focus();
+    document.querySelector('#chat-message-input').onkeyup = function(e) {
+        if (e.keyCode === 13) {
+            document.querySelector('#chat-message-submit').click();
+        }
+    }
+
+    document.querySelector('#chat-message-submit').onclick = function(e) {
+        var messageInputDom = document.querySelector('#chat-message-input');
+        var message = messageInputDom.value;
+        document.querySelector('#chat-message-input').value = '';
+        chatSocket.send(JSON.stringify({
+            'user_id': "{{ user.user_id }}",
+            'username': "{{ user.username }}",
+            'message': message,
+        }));
+    }
+
+</script>
+
+{% else %}
+<p>You must <a href="/">sign in</a> to use this app</p>
+{% endif %}
+{% endblock %}
